@@ -1,0 +1,280 @@
+c.ecountid
+a.agencyid
+
+
+--- proc used for Proc_Payment report ----
+
+p_promo_balancingpayments_porc
+
+
+
+--- Proc used to not to be paid ----------
+
+
+p_Promo_Balancing_NotToBePaid_PorC
+
+v_Promo_BigPicture_Snapshot
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------------------------------------------------
+
+
+
+--sp_helptext v_promo_main_snapshot
+
+--select top 10  * from promo_agents where isnull(agencyid,'')='' 
+--select top 10 * from promo_partnerid where isnull(ecountid,'')=''
+
+
+-- 339-411  no card issued = 72 
+-- 412-563 not registred   =  151  
+
+-- No Card Issued  Section and Not Registered
+-- 2057 - 223  = 1834
+-- 
+
+with m as(
+  
+select      
+ c.ecountid,
+ m.AgencyID,      
+ m.AgencyName,      
+ m.ssn,      
+ m.agentname,      
+ m.accountingeffectivedate,      
+ m.effective,      
+ m.teamid,      
+ m.invoiceid,      
+ m.policyid,      
+ m.companyid,      
+ m.marketid,      
+ m.coverageid,      
+ m.rewards,      
+ m.NamedInsured,      
+ m.PolicyEffectiveDate,      
+ case when m.inRater = 0 then 'N' else 'Y' end as inRater,      
+ m.PromoStatus,      
+ case when m.promostatus = 5 then      
+  'FORFEITED'      
+ else      
+  CASE WHEN M.PROMOSTATUS = 4 THEN      
+   UPPER(M.PROMOSTATUSDESCR)      
+  ELSE      
+   case when m.uid=0 or m.registered=0 then      
+    'NEEDS CORRECTING'      
+   else      
+    case when m.promostatus = 3 then      
+     m.PromoStatusDescr      
+    else      
+     case when isnull(c.ecountid,'') = '' then      
+      'NO CARD ISSUED'      
+     else      
+      case when isnull(a.agencyid,'') = '' then      
+       'NOT REGISTERED'      
+      else      
+       upper(m.PromoStatusDescr)      
+      end      
+     end       
+    end      
+   end      
+  END       
+ end as PromoStatusDescr,      
+-- m.PromoStatusDescr,      
+ case when m.SelectAgent = 0 then 'N' else 'Y' end as SelectAgency,      
+ m.realpremium as Premium,      
+ m.QuoteID,      
+ case when m.Paid = 0 then 'N' else 'Y' end as Paid,      
+ case when isnull(p.partnerid,'') = '' then 'N/A' else master.dbo.f_datetostring(p.datesubmitted) end as DatePaid,       
+ case when m.SingleCard = 0 then 'N' else 'Y' end as SingleCardAgency,      
+ case when isnull(c.ecountid,'') = '' then 'N' else 'Y' end as IssuedCard,      
+ case when isnull(c.ecountid,'') = '' then 'N/A' else master.dbo.f_datetostring(c.datesubmitted) end as DateSent,      
+ case when isnull(a.agencyid,'') = '' then 'N' else 'Y' end as Registered,      
+ m.uid,      
+ case when m.registered = 1 then 'Y' else 'N' end as ValidName,      
+ '20' + M.GLPERIOD AS Period      
+from      
+ v_promo_main_snapshot m      
+left join      
+ promo_agents a on      
+ a.agencyid = m.agencyid and      
+ a.last4ssn = m.ssn      
+left join      
+ promo_partnerid c on      
+ c.partnerid = rtrim(ltrim(m.agencyid)) + rtrim(ltrim(m.ssn)) and      
+ c.trantype = 'C'      
+left join      
+ promo_partnerid p on      
+ p.partnerid = m.agencyid + m.ssn and      
+ p.trantype = 'P' and      
+ p.invoiceid = m.invoiceid and      
+ p.dept = m.teamid 
+
+
+ )
+
+
+
+	select DISTINCT
+		m.ecountid,
+		m.agencyid,
+		m.promostatusdescr,
+		M.agencyid as ProducerID,
+		M.agencyname as agentdbaname,
+		m.ssn,
+		m.agentname,
+		m.accountingeffectivedate,
+		m.effective,
+		m.teamid,
+		m.invoiceid,
+		m.policyid,
+		m.rewards,
+		m.quoteid,
+		m.Premium as Premium,
+		m.promostatus,
+		'01-01-2013' as FromDate,
+		'01-31-2013' as ToDate
+		
+--select COUNT(*)		
+	from
+		 m
+	where
+		m.accountingeffectivedate between '01-01-2013' and '01-31-2013' and
+		not exists (
+		select
+			v1.*
+		from
+			v_promo_payments_snapshot v1
+		where
+			v1.promostatus = 2 and
+			v1.accountingeffectivedate between '01-01-2013' and '01-31-2013' and
+			(select count(*)
+			 from
+				v_promo_payments_snapshot v2
+			 where
+				v2.invoiceid = v1.invoiceid and
+				v2.accountingeffectivedate between '01-01-2013' and '01-31-2013' and
+				v2.promostatus = 2) = 1 and
+			v1.invoiceid = m.invoiceid)
+
+
+
+--p_Promo_Balancing_NotToBePaid_PorC 'C'
+
+
+
+
+-------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+CREATE VIEW v_Promo_Main_Snapshot          
+as          
+          
+select distinct          
+ wr.producerid as AgencyID,            
+ a.agentdbaname as AgencyName,           
+ isnull(WR.ssn,'')  as ssn ,           
+ isnull(upper(WR.firstname + ' ' + WR.lastname),'') as agentname,           
+ wr.accountingeffectivedate,           
+ wr.effective,           
+ wr.teamid,           
+ wr.invoiceid,           
+ wr.policyid,           
+          
+ wr.companyid,          
+ wr.marketid,          
+ wr.coverageid,          
+          
+ --case when teamid in ('903', '923') then 5 else 10 end as rewards,          
+ case when wr.invoiceid in ('1044437','1023087','1036114','1036123','1055521','1057969','1028102','1057986') then          
+  10          
+ else          
+  wr.RewardAmount          
+ end as Rewards,          
+ wr.premium,          
+ wr.postdate,          
+ wr.totalpremium,          
+ wr.NamedInsured,          
+ wr.Effective as PolicyEffectiveDate,          
+ case when (isnull(WR.ssn,'')='' or isnull(WR.firstname,'')='' or isnull(WR.lastname,'')='') then          
+  0          
+ else          
+  1          
+ end as Registered,          
+ 1 as inRater,          
+ case when (isnull(WR.ssn,'') in('','9999','0000') or len(WR.ssn) <> 4) then          
+  0          
+ else          
+  1          
+ end as UID,          
+ WR.PromoStatus,          
+ case WR.PROMOSTATUS                  
+ when 0 then ' '                  
+ when 1 then 'Ready To Redeem'                  
+ when 2 then 'Redeem Requested'                  
+ when 3 then 'Declined'                  
+ when 4 then 'Paid'                  
+ when 5 then ' '         
+ when 6 then 'Redeem Requested'         
+ --else 'Unknown'          
+ end as PromoStatusDescr,          
+ WR.SelectAgent,          
+ wr.invoicekey_pk,          
+ wr.realpremium,          
+ WR.QuoteID,          
+ a.sicid,          
+ isnull(upper(WR.firstname),'') as FirstName,          
+ isnull(upper(WR.lastname),'') as LastName,          
+ case when isnull(ppp.trantype,'') = 'P' then 1 else 0 end as Paid,          
+ case when isnull(ass.sicid,0) = 0 then 0 else 1 end as SingleCard,          
+ a.mailingaddress1 as AgentMailingAddress1,          
+ a.mailingaddress2 as AgentMailingAddress2,          
+ a.mailingcity as AgentMailingCity,          
+ a.mailingstate as AgentMailingState,          
+ substring(a.mailingzip,1,5) as AgentMailingZip,          
+ a.phonelocal as AgentPhoneLocal,          
+ wr.glperiod as GLPeriod,          
+ wr.InvoiceTypeID,          
+ wr.LastEdited          
+from          
+ --[godzilla\siu].cis.dbo.WriteRewards wr          
+ v_WriteRewards wr (nolock)          
+join          
+ [el-cid].agentmaster.dbo.tb_agents a on          
+ a.agentid = wr.producerid          
+join          
+ [el-cid].agentmaster.dbo.tb_agentsbycompany ac on          
+ AC.sicid = a.sicid and          
+ AC.companytypeid = 1          
+-- left           
+-- join          
+--  propertycasualty..xpc_comm_binder p          
+--   on p.policy_nbr = wr.policyid  and          
+--   p.comm_quote_id= (select max(c1.comm_quote_id) from propertycasualty..xpc_comm_binder c1 where c1.policy_nbr = p.policy_nbr)          
+          
+left          
+join          
+ promo_partnerid ppp on          
+ ppp.invoiceid = WR.invoiceid and          
+ ppp.partnerid = wr.producerid + WR.ssn and          
+ ppp.trantype = 'P'          
+left join          
+ [el-cid].agentmaster.dbo.tb_associations ass on          
+ ass.sicid = a.sicid and          
+ ass.associationtypeid = 30 
+
+
+--------------------------------------------------------------------------------------------
+
+
+
+jlacroix@siuins.com
+

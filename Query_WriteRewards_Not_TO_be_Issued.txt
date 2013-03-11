@@ -1,0 +1,205 @@
+ v_promo_bigpicture_snapshot
+
+select    
+ 
+ --case when 1 = 0 then 'N' else 'Y' end as inRater,    
+ a.agencyid,
+ m.PromoStatus,    
+ case when m.promostatus = 5 then    
+  'FORFEITED'    
+ else    
+  CASE WHEN M.PROMOSTATUS = 4 THEN    
+   UPPER(M.promostatus)    
+  ELSE    
+   case when (case when (isnull(m.ssn,'')='' or isnull(m.firstname,'')='' or isnull(m.lastname,'')='') then 0 else 1 end)=0 
+   or (case when (isnull(m.ssn,'') in('','9999','0000') or len(m.ssn) <> 4) then 0 else 1 end)=0 then    
+    111    
+   else    
+    case when m.promostatus = 3 then    
+     m.promostatus    
+    else    
+     case when isnull(c.ecountid,'') = '' then    
+      888    --'NO CARD ISSUED' 
+     else    
+      case when isnull(a.agencyid,'') = '' then    
+       999     --  'NOT REGISTERED' 
+      else    
+       upper(m.promostatus)    
+      end    
+     end     
+    end    
+   end    
+  END     
+ end as PromoStatusDescr    
+-- m.PromoStatusDescr,    
+-- m.QuoteID,    
+ --m.uid   
+ 
+from    
+v_WriteRewards  m 
+ 
+join      
+ [el-cid].agentmaster.dbo.tb_agents aa on      
+ aa.agentid = m.producerid      
+join      
+ [el-cid].agentmaster.dbo.tb_agentsbycompany ac on      
+ AC.sicid = aa.sicid and      
+ AC.companytypeid = 1 
+      
+left      
+join      
+ promo_partnerid ppp on      
+ ppp.invoiceid = m.invoiceid and      
+ ppp.partnerid = m.producerid + m.ssn and      
+ ppp.trantype = 'P'  and
+ ppp.dept = m.teamid     
+left join      
+ [el-cid].agentmaster.dbo.tb_associations ass on      
+ ass.sicid = aa.sicid and      
+ ass.associationtypeid = 30 
+
+ --v_promo_main_snapshot m    
+
+left join    
+ promo_agents a on    
+ a.agencyid = m.producerid and    
+ a.last4ssn = m.ssn    
+left join    
+ promo_partnerid c on    
+ c.partnerid = rtrim(ltrim(m.producerid)) + rtrim(ltrim(m.ssn)) and    
+ c.trantype = 'C'    
+
+ 
+ where m.accountingeffectivedate between '01/01/2013' and '01/31/2013' 
+ and m.promostatus <> 5 and  m.promostatus <> 4 and 
+ (case when (isnull(m.ssn,'')='' or isnull(m.firstname,'')='' or isnull(m.lastname,'')='') then 0 else 1 end)<>0 and 
+ (case when (isnull(m.ssn,'') in('','9999','0000') or len(m.ssn) <> 4) then 0 else 1 end)<>0
+ and m.promostatus <> 3
+ and (isnull(c.ecountid,'') = '' or isnull(a.agencyid,'') = '' )
+ 
+
+
+
+
+
+---------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+-- v_promo_bigpicture_snapshot
+
+select    
+ 
+ --case when 1 = 0 then 'N' else 'Y' end as inRater,    
+ a.agencyid,
+ m.PromoStatus,    
+ case when m.promostatus = 5 then    
+  'FORFEITED'    
+ else    
+  CASE WHEN M.PROMOSTATUS = 4 THEN    
+   UPPER(M.promostatus)    
+  ELSE    
+   case when (case when (isnull(m.ssn,'')='' or isnull(m.firstname,'')='' or isnull(m.lastname,'')='') then 0 else 1 end)=0 
+   or (case when (isnull(m.ssn,'') in('','9999','0000') or len(m.ssn) <> 4) then 0 else 1 end)=0 then    
+    111    
+   else    
+    case when m.promostatus = 3 then    
+     m.promostatus    
+    else    
+     case when isnull(c.ecountid,'') = '' then    
+      888    --'NO CARD ISSUED' 
+     else    
+      case when isnull(a.agencyid,'') = '' then    
+       999     --  'NOT REGISTERED' 
+      else    
+       upper(m.promostatus)    
+      end    
+     end     
+    end    
+   end    
+  END     
+ end as PromoStatusDescr    
+-- m.PromoStatusDescr,    
+-- m.QuoteID,    
+ --m.uid   
+ 
+from    
+v_WriteRewards  m 
+ 
+join      
+ [el-cid].agentmaster.dbo.tb_agents aa on      
+ aa.agentid = m.producerid      
+join      
+ [el-cid].agentmaster.dbo.tb_agentsbycompany ac on      
+ AC.sicid = aa.sicid and      
+ AC.companytypeid = 1 
+      
+left      
+join      
+ promo_partnerid ppp on      
+ ppp.invoiceid = m.invoiceid and      
+ ppp.partnerid = m.producerid + m.ssn and      
+ ppp.trantype = 'P'  and
+ ppp.dept = m.teamid     
+left join      
+ [el-cid].agentmaster.dbo.tb_associations ass on      
+ ass.sicid = aa.sicid and      
+ ass.associationtypeid = 30 
+
+ --v_promo_main_snapshot m    
+
+left join    
+ promo_agents a on    
+ a.agencyid = m.producerid and    
+ a.last4ssn = m.ssn    
+left join    
+ promo_partnerid c on    
+ c.partnerid = rtrim(ltrim(m.producerid)) + rtrim(ltrim(m.ssn)) and    
+ c.trantype = 'C'    
+
+ 
+ where m.accountingeffectivedate between '01/01/2013' and '01/31/2013' 
+ --and (isnull(c.ecountid,'') = '' or isnull(a.agencyid,'') = '')
+ 
+ 
+ --and m.promostatus not in (4,5,3)  
+ --and 
+ --(case when (isnull(m.ssn,'')='' or isnull(m.firstname,'')='' or isnull(m.lastname,'')='') then 0 else 1 end)<>0 
+ --and 
+ --(case when (isnull(m.ssn,'') in('','9999','0000') or len(m.ssn) <> 4) then 0 else 1 end)<>0
+ --and 
+ 
+ 
+ 
+ 
+ 
+ 
+ /*
+ 
+ case when (isnull(WR.ssn,'')='' or isnull(WR.firstname,'')='' or isnull(WR.lastname,'')='') then      
+  0      
+ else      
+  1      
+ end as Registered,   
+ 
+ 
+ case when (isnull(WR.ssn,'') in('','9999','0000') or len(WR.ssn) <> 4) then      
+  0      
+ else      
+  1      
+ end as UID,  
+ 
+ */
+ 
+ 
+-- select COUNT(*)  from promo_partnerid where isnull(ecountid,'') = ''
+--  select COUNT(*) from promo_agents where isnull(agencyid,'') = ''
+--
+
+ 
